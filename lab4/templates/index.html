@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shortest Path Lab — CS5303</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0F1216;
+    --panel: #171B21;
+    --panel-2: #1D222A;
+    --ink: #E7EAF0;
+    --ink-dim: #8D95A5;
+    --rule: #2B313C;
+    --dij: #5AA9E6;
+    --target: #F2C14E;
+    --edge-dim: #3A4150;
+    --danger: #E07A5F;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: radial-gradient(ellipse at top left, #151A20 0%, var(--bg) 55%);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    line-height:1.5;
+    min-height:100vh;
+    padding:0 0 80px;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:0 24px;}
+
+  header.hero{padding:64px 24px 40px; border-bottom:1px solid var(--rule);}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--ink-dim); display:flex; align-items:center; gap:10px; margin-bottom:18px;
+  }
+  .eyebrow::before{content:""; width:8px; height:8px; background:var(--dij); display:inline-block; animation:blink 1.6s steps(2) infinite;}
+  @keyframes blink{ 50%{opacity:.15;} }
+  h1{
+    font-family:'IBM Plex Mono',monospace; font-weight:700;
+    font-size:clamp(28px,4.4vw,44px); line-height:1.15; margin:0 0 14px; max-width:19ch;
+  }
+  h1 .accent{color:var(--dij);}
+  .sub{color:var(--ink-dim); max-width:60ch; font-size:15px; margin:0;}
+
+  .panel{background:var(--panel); border:1px solid var(--rule); border-radius:3px; padding:24px; margin-top:24px;}
+  .panel h2{
+    font-family:'IBM Plex Mono',monospace; font-size:13px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--ink-dim); margin:0 0 18px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .panel h2::after{content:""; flex:1; height:1px; background:var(--rule);}
+
+  label{
+    display:block; font-family:'IBM Plex Mono',monospace; font-size:11px;
+    letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim); margin-bottom:6px;
+  }
+  textarea, input[type=text], input[type=number], select{
+    width:100%; background:var(--bg); border:1px solid var(--rule); border-radius:2px;
+    color:var(--ink); font-family:'IBM Plex Mono',monospace; font-size:14px; padding:10px 12px; resize:vertical;
+  }
+  textarea:focus, input:focus, select:focus{ outline:2px solid var(--dij); outline-offset:1px; }
+  .field{margin-bottom:16px;}
+  .row{display:flex; gap:16px; flex-wrap:wrap;}
+  .row .field{flex:1; min-width:160px;}
+  .hint{font-size:12px; color:var(--ink-dim); margin-top:-10px; margin-bottom:16px;}
+
+  button{
+    font-family:'IBM Plex Mono',monospace; font-size:13px; letter-spacing:.06em; text-transform:uppercase;
+    background:var(--dij); color:#0B1420; border:none; border-radius:2px; padding:11px 22px;
+    cursor:pointer; font-weight:600; transition:transform .12s ease, background .12s ease;
+  }
+  button:hover{background:#79BCEF;}
+  button:active{transform:scale(.98);}
+  button:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
+  button[disabled]{opacity:.5; cursor:progress;}
+
+  .error-box{
+    display:none; margin-top:16px; padding:12px 14px; border:1px solid var(--danger);
+    color:var(--danger); font-family:'IBM Plex Mono',monospace; font-size:13px; border-radius:2px;
+  }
+
+  .graph-shell{
+    background:var(--bg); border:1px solid var(--rule); border-radius:2px; padding:8px;
+  }
+  svg{ display:block; width:100%; height:auto; }
+  .edge-base{ stroke:var(--edge-dim); stroke-width:1.5; }
+  .edge-tree{ stroke:var(--dij); stroke-width:2.5; opacity:.55; }
+  .edge-path{ stroke:var(--target); stroke-width:3.5; }
+  .edge-label{ font-family:'IBM Plex Mono',monospace; font-size:11px; fill:var(--ink-dim); }
+  .node-circle{ stroke:var(--bg); stroke-width:2; }
+  .node-label{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; fill:#0B1420;
+    text-anchor:middle; dominant-baseline:central;
+  }
+
+  table{ width:100%; border-collapse:collapse; margin-top:18px; font-family:'IBM Plex Mono',monospace; font-size:13px; }
+  th, td{ text-align:left; padding:8px 10px; border-bottom:1px solid var(--rule); }
+  th{ color:var(--ink-dim); font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:500; }
+  tr.selected td{ color:var(--target); }
+  tr.unreachable td{ color:var(--ink-dim); }
+  td.dist{ font-weight:600; }
+  tr{ cursor:pointer; }
+  tr:hover td{ color:var(--ink); }
+
+  footer{
+    text-align:center; color:var(--ink-dim); font-family:'IBM Plex Mono',monospace;
+    font-size:11px; margin-top:50px; letter-spacing:.05em;
+  }
+  a{color:var(--dij);}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">CS5303 · DAA Lab · Ex. No. 4</div>
+    <h1>Every vertex, ranked by <span class="accent">distance</span> from the source.</h1>
+    <p class="sub">Dijkstra grows outward from a source node, always settling the nearest unvisited vertex next. Click any row to trace its shortest path on the graph.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="panel">
+    <h2>Define the graph</h2>
+    <div class="field">
+      <label for="source-input">Source vertex</label>
+      <input type="number" id="source-input" value="0" min="0" style="max-width:140px;">
+    </div>
+    <div class="field">
+      <label for="graph-input">Adjacency list — one vertex per line: u: v,w v,w ...</label>
+      <textarea id="graph-input" rows="7">0: 1,4 2,1
+1: 3,1
+2: 1,2 3,5
+3: 4,3
+4: 5,2
+5:</textarea>
+    </div>
+    <div class="hint">Directed, non-negative weights. Vertices numbered 0 to n-1, every vertex must appear on its own line (even with no outgoing edges).</div>
+    <button id="run-btn">Run Dijkstra</button>
+    <div class="error-box" id="run-error"></div>
+  </div>
+
+  <div class="panel" id="results-panel" style="display:none;">
+    <h2>Shortest paths from source</h2>
+
+    <div class="graph-shell">
+      <svg id="graph-svg" viewBox="0 0 640 420"></svg>
+    </div>
+
+    <table id="results-table">
+      <thead>
+        <tr><th>Vertex</th><th>Distance</th><th>Path</th></tr>
+      </thead>
+      <tbody id="results-tbody"></tbody>
+    </table>
+  </div>
+
+  <footer>
+    dijkstra-api &middot; <a href="/api">raw JSON</a>
+  </footer>
+</div>
+
+<script>
+const API = "";
+let lastData = null;
+let selectedTarget = null;
+
+function parseGraph(text){
+  const graph = {};
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  for(const line of lines){
+    const [head, rest] = line.split(':');
+    const u = head.trim();
+    const adj = [];
+    if(rest && rest.trim()){
+      for(const pair of rest.trim().split(/\s+/)){
+        const [v, w] = pair.split(',').map(x => Number(x.trim()));
+        adj.push([v, w]);
+      }
+    }
+    graph[u] = adj;
+  }
+  return graph;
+}
+
+function layoutNodes(n, width, height){
+  const cx = width/2, cy = height/2 - 10;
+  const r = Math.min(width, height)/2 - 60;
+  const pts = [];
+  for(let i=0;i<n;i++){
+    const angle = (2*Math.PI*i/n) - Math.PI/2;
+    pts.push({ x: cx + r*Math.cos(angle), y: cy + r*Math.sin(angle) });
+  }
+  return pts;
+}
+
+function edgeKey(u,v){ return `${u}->${v}`; }
+
+function pathEdgeSet(path){
+  const s = new Set();
+  for(let i=0;i<path.length-1;i++) s.add(edgeKey(path[i], path[i+1]));
+  return s;
+}
+
+function treeEdgeSet(data){
+  const s = new Set();
+  for(const vtx of data.vertices){
+    const p = vtx.path;
+    if(p.length >= 2) s.add(edgeKey(p[p.length-2], p[p.length-1]));
+  }
+  return s;
+}
+
+function drawGraph(data, target){
+  const svgEl = document.getElementById('graph-svg');
+  const width = 640, height = 420;
+  const n = data.n;
+  const pts = layoutNodes(n, width, height);
+  const tree = treeEdgeSet(data);
+  const highlightPath = target !== null ? pathEdgeSet(data.vertices[target].path) : new Set();
+
+  let svg = `<svg id="graph-svg" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">`;
+  svg += `<defs>
+    <marker id="arrow-dim" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--edge-dim)"/></marker>
+    <marker id="arrow-tree" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--dij)"/></marker>
+    <marker id="arrow-path" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--target)"/></marker>
+  </defs>`;
+
+  for(const e of data.edges){
+    const a = pts[e.u], b = pts[e.v];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+    const shrink = 20;
+    const x1 = a.x + dx/dist*shrink, y1 = a.y + dy/dist*shrink;
+    const x2 = b.x - dx/dist*shrink, y2 = b.y - dy/dist*shrink;
+    const mx = (a.x+b.x)/2, my = (a.y+b.y)/2;
+    const key = edgeKey(e.u, e.v);
+    let cls = 'edge-base', marker = 'arrow-dim';
+    if(highlightPath.has(key)){ cls = 'edge-path'; marker = 'arrow-path'; }
+    else if(tree.has(key)){ cls = 'edge-tree'; marker = 'arrow-tree'; }
+    svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${cls}" marker-end="url(#${marker})" />`;
+    svg += `<text x="${mx}" y="${my-4}" class="edge-label" text-anchor="middle">${e.weight}</text>`;
+  }
+
+  pts.forEach((p, i) => {
+    const isTarget = i === target;
+    const isSource = i === data.source;
+    const fill = isTarget ? 'var(--target)' : (isSource ? 'var(--dij)' : '#4B5568');
+    svg += `<circle cx="${p.x}" cy="${p.y}" r="16" class="node-circle" fill="${fill}" />`;
+    svg += `<text x="${p.x}" y="${p.y}" class="node-label">${i}</text>`;
+  });
+
+  svg += `</svg>`;
+  svgEl.outerHTML = svg;
+}
+
+function renderTable(data){
+  const tbody = document.getElementById('results-tbody');
+  tbody.innerHTML = '';
+  data.vertices.forEach(vtx => {
+    const tr = document.createElement('tr');
+    if(!vtx.reachable) tr.classList.add('unreachable');
+    if(vtx.vertex === selectedTarget) tr.classList.add('selected');
+    tr.innerHTML = `
+      <td>${vtx.vertex}</td>
+      <td class="dist">${vtx.reachable ? vtx.distance : '∞'}</td>
+      <td>${vtx.reachable ? vtx.path.join(' → ') : 'unreachable'}</td>
+    `;
+    tr.addEventListener('click', () => {
+      selectedTarget = vtx.vertex;
+      renderTable(data);
+      drawGraph(data, selectedTarget);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+async function runDijkstra(){
+  const source = parseInt(document.getElementById('source-input').value, 10);
+  let graph;
+  try{
+    graph = parseGraph(document.getElementById('graph-input').value);
+  }catch(e){
+    document.getElementById('run-error').textContent = 'Could not parse the adjacency list.';
+    document.getElementById('run-error').style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('run-btn');
+  const errBox = document.getElementById('run-error');
+  errBox.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Running…';
+
+  try{
+    const res = await fetch(API + '/dijkstra', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ graph, source })
+    });
+    const data = await res.json();
+    if(!res.ok){ throw new Error(data.error || 'Request failed'); }
+
+    lastData = data;
+    selectedTarget = null;
+    document.getElementById('results-panel').style.display = 'block';
+    renderTable(data);
+    drawGraph(data, null);
+  }catch(e){
+    errBox.textContent = e.message;
+    errBox.style.display = 'block';
+    document.getElementById('results-panel').style.display = 'none';
+  }finally{
+    btn.disabled = false; btn.textContent = 'Run Dijkstra';
+  }
+}
+
+document.getElementById('run-btn').addEventListener('click', runDijkstra);
+runDijkstra();
+</script>
+
+</body>
+</html>
