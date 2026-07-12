@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>String Matching Lab — CS5303</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #121309;
+    --panel: #1B1C14;
+    --panel-2: #22241A;
+    --ink: #EDE7D6;
+    --ink-dim: #9C9887;
+    --rule: #34362A;
+    --naive: #8F8776;
+    --kmp: #E3A857;
+    --rk: #52B3A4;
+    --danger: #C97B63;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at top left, #191A11 0%, var(--bg) 55%);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    line-height:1.5;
+    min-height:100vh;
+    padding:0 0 80px;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:0 24px;}
+
+  /* ---------- Hero ---------- */
+  header.hero{
+    padding:64px 24px 40px;
+    border-bottom:1px solid var(--rule);
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:18px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:8px;height:8px;
+    background:var(--kmp);
+    display:inline-block;
+    animation:blink 1.6s steps(2) infinite;
+  }
+  @keyframes blink{ 50%{opacity:.15;} }
+  h1{
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:700;
+    font-size:clamp(28px,4.4vw,44px);
+    line-height:1.15;
+    margin:0 0 14px;
+    max-width:15ch;
+  }
+  h1 .accent{color:var(--kmp);}
+  .sub{
+    color:var(--ink-dim);
+    max-width:56ch;
+    font-size:15px;
+    margin:0;
+  }
+
+  /* ---------- Panels ---------- */
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--rule);
+    border-radius:3px;
+    padding:24px;
+    margin-top:24px;
+  }
+  .panel h2{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    margin:0 0 18px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .panel h2::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background:var(--rule);
+  }
+
+  label{
+    display:block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    margin-bottom:6px;
+  }
+  textarea, input[type=text], input[type=number]{
+    width:100%;
+    background:var(--bg);
+    border:1px solid var(--rule);
+    border-radius:2px;
+    color:var(--ink);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:14px;
+    padding:10px 12px;
+    resize:vertical;
+  }
+  textarea:focus, input:focus{
+    outline:2px solid var(--kmp);
+    outline-offset:1px;
+  }
+  .field{margin-bottom:16px;}
+  .row{display:flex; gap:16px; flex-wrap:wrap;}
+  .row .field{flex:1; min-width:180px;}
+
+  button{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    background:var(--kmp);
+    color:#1A1503;
+    border:none;
+    border-radius:2px;
+    padding:11px 22px;
+    cursor:pointer;
+    font-weight:600;
+    transition:transform .12s ease, background .12s ease;
+  }
+  button:hover{background:#EFB868;}
+  button:active{transform:scale(.98);}
+  button:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
+  button.ghost{
+    background:transparent;
+    color:var(--ink-dim);
+    border:1px solid var(--rule);
+  }
+  button.ghost:hover{color:var(--ink); border-color:var(--ink-dim); background:transparent;}
+  button[disabled]{opacity:.5; cursor:progress;}
+
+  .error-box{
+    display:none;
+    margin-top:16px;
+    padding:12px 14px;
+    border:1px solid var(--danger);
+    color:var(--danger);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    border-radius:2px;
+  }
+
+  /* ---------- Highlighted text ---------- */
+  .scan-out{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:14px;
+    line-height:1.9;
+    word-break:break-all;
+    background:var(--bg);
+    border:1px solid var(--rule);
+    border-radius:2px;
+    padding:14px;
+    margin-top:16px;
+  }
+  .scan-out mark{
+    background:transparent;
+    color:var(--kmp);
+    border-bottom:2px solid var(--kmp);
+    padding:0 1px;
+  }
+
+  /* ---------- Result cards ---------- */
+  .cards{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+    margin-top:20px;
+  }
+  @media (max-width:680px){ .cards{grid-template-columns:1fr;} }
+  .card{
+    background:var(--panel-2);
+    border:1px solid var(--rule);
+    border-left:3px solid var(--card-accent, var(--kmp));
+    border-radius:2px;
+    padding:16px;
+  }
+  .card .name{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--card-accent, var(--kmp));
+    margin-bottom:10px;
+  }
+  .card .metric{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:26px;
+    font-weight:600;
+  }
+  .card .metric-label{
+    font-size:11px;
+    color:var(--ink-dim);
+    margin-bottom:2px;
+  }
+  .card .sep{height:1px; background:var(--rule); margin:12px 0;}
+  .card .bar-track{
+    height:6px;
+    background:var(--bg);
+    border-radius:3px;
+    overflow:hidden;
+    margin-top:6px;
+  }
+  .card .bar-fill{
+    height:100%;
+    width:0%;
+    background:var(--card-accent, var(--kmp));
+    transition:width .6s ease;
+  }
+  .card .small{font-size:12px; color:var(--ink-dim); margin-top:10px;}
+
+  /* ---------- Benchmark ---------- */
+  .bench-row{margin-bottom:18px;}
+  .bench-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--ink-dim);
+    margin-bottom:6px;
+  }
+  .bench-bars{display:flex; flex-direction:column; gap:5px;}
+  .bench-bar{display:flex; align-items:center; gap:10px;}
+  .bench-bar .tag{
+    width:78px;
+    flex-shrink:0;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+  }
+  .bench-bar .track{flex:1; background:var(--bg); border-radius:2px; overflow:hidden; height:16px;}
+  .bench-bar .fill{height:100%; width:0%; transition:width .6s ease; display:flex; align-items:center;}
+  .bench-bar .val{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--ink);
+    width:70px;
+    text-align:right;
+  }
+
+  footer{
+    text-align:center;
+    color:var(--ink-dim);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    margin-top:50px;
+    letter-spacing:.05em;
+  }
+  a{color:var(--kmp);}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">CS5303 · DAA Lab · Ex. No. 2</div>
+    <h1>Same haystack.<br>Three ways to find <span class="accent">the needle.</span></h1>
+    <p class="sub">Run Naive, KMP, and Rabin-Karp against the same text and pattern, side by side — comparisons, timing, and match positions.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- Search panel -->
+  <div class="panel">
+    <h2>Run a search</h2>
+    <div class="field">
+      <label for="text-input">Text</label>
+      <textarea id="text-input" rows="3">AABAACAADAABAABA</textarea>
+    </div>
+    <div class="field">
+      <label for="pattern-input">Pattern</label>
+      <input type="text" id="pattern-input" value="AABA">
+    </div>
+    <button id="run-btn">Run search</button>
+    <div class="error-box" id="search-error"></div>
+
+    <div id="scan-wrap" style="display:none;">
+      <div class="scan-out" id="scan-out"></div>
+      <div class="cards" id="cards"></div>
+    </div>
+  </div>
+
+  <!-- Benchmark panel -->
+  <div class="panel">
+    <h2>Benchmark on random text</h2>
+    <div class="row">
+      <div class="field">
+        <label for="bench-length">Text length</label>
+        <input type="number" id="bench-length" value="10000" min="10" max="200000">
+      </div>
+      <div class="field">
+        <label for="bench-patterns">Patterns (comma-separated)</label>
+        <input type="text" id="bench-patterns" value="AB,ABCD,ABCDAB,ABCDABCD">
+      </div>
+    </div>
+    <button class="ghost" id="bench-btn">Run benchmark</button>
+    <div class="error-box" id="bench-error"></div>
+    <div id="bench-out" style="margin-top:20px;"></div>
+  </div>
+
+  <footer>
+    string-match-api &middot; <a href="/">raw JSON</a>
+  </footer>
+</div>
+
+<script>
+const API = ""; // same origin
+
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function highlightMatches(text, pattern, positions){
+  if(!positions.length) return escapeHtml(text);
+  let out = '';
+  let cursor = 0;
+  const plen = pattern.length;
+  const sorted = [...positions].sort((a,b)=>a-b);
+  for(const pos of sorted){
+    if(pos < cursor) continue; // overlapping match, skip re-highlight
+    out += escapeHtml(text.slice(cursor, pos));
+    out += '<mark>' + escapeHtml(text.slice(pos, pos+plen)) + '</mark>';
+    cursor = pos + plen;
+  }
+  out += escapeHtml(text.slice(cursor));
+  return out;
+}
+
+const ALGO_META = {
+  naive:      { label: 'Naive',       varName: '--naive' },
+  kmp:        { label: 'KMP',         varName: '--kmp' },
+  rabin_karp: { label: 'Rabin-Karp',  varName: '--rk' },
+};
+
+async function runSearch(){
+  const text = document.getElementById('text-input').value;
+  const pattern = document.getElementById('pattern-input').value;
+  const btn = document.getElementById('run-btn');
+  const errBox = document.getElementById('search-error');
+  errBox.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Running…';
+
+  try{
+    const res = await fetch(API + '/search', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({text, pattern})
+    });
+    const data = await res.json();
+    if(!res.ok){ throw new Error(data.error || 'Request failed'); }
+
+    document.getElementById('scan-wrap').style.display = 'block';
+    const anyAlgo = Object.values(data.results)[0];
+    document.getElementById('scan-out').innerHTML =
+      highlightMatches(data.text, data.pattern, anyAlgo.matches);
+
+    const maxComparisons = Math.max(...Object.values(data.results).map(r => r.comparisons), 1);
+    const cardsEl = document.getElementById('cards');
+    cardsEl.innerHTML = '';
+    for(const key of ['naive','kmp','rabin_karp']){
+      const r = data.results[key];
+      const meta = ALGO_META[key];
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.setProperty('--card-accent', `var(${meta.varName})`);
+      card.innerHTML = `
+        <div class="name">${meta.label}</div>
+        <div class="metric-label">Comparisons</div>
+        <div class="metric">${r.comparisons}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:0%"></div></div>
+        <div class="sep"></div>
+        <div class="small">${r.matches.length} match${r.matches.length===1?'':'es'} &middot; ${r.time_ms} ms</div>
+      `;
+      cardsEl.appendChild(card);
+      requestAnimationFrame(() => {
+        card.querySelector('.bar-fill').style.width =
+          Math.max(4, (r.comparisons / maxComparisons) * 100) + '%';
+      });
+    }
+  }catch(e){
+    errBox.textContent = e.message;
+    errBox.style.display = 'block';
+    document.getElementById('scan-wrap').style.display = 'none';
+  }finally{
+    btn.disabled = false; btn.textContent = 'Run search';
+  }
+}
+
+async function runBenchmark(){
+  const length = document.getElementById('bench-length').value;
+  const patterns = document.getElementById('bench-patterns').value;
+  const btn = document.getElementById('bench-btn');
+  const errBox = document.getElementById('bench-error');
+  errBox.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Running…';
+
+  try{
+    const url = `${API}/benchmark?length=${encodeURIComponent(length)}&patterns=${encodeURIComponent(patterns)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if(!res.ok){ throw new Error(data.error || 'Request failed'); }
+
+    const out = document.getElementById('bench-out');
+    out.innerHTML = '';
+    for(const row of data.benchmark){
+      const maxC = Math.max(row.naive.comparisons, row.kmp.comparisons, row.rabin_karp.comparisons, 1);
+      const rowEl = document.createElement('div');
+      rowEl.className = 'bench-row';
+      rowEl.innerHTML = `
+        <div class="bench-label">Pattern "${escapeHtml(row.pattern)}" &middot; text length ${data.text_length}</div>
+        <div class="bench-bars">
+          ${['naive','kmp','rabin_karp'].map(key => {
+            const meta = ALGO_META[key];
+            const c = row[key].comparisons;
+            return `
+              <div class="bench-bar">
+                <div class="tag">${meta.label}</div>
+                <div class="track"><div class="fill" data-w="${(c/maxC)*100}" style="width:0%; background:var(${meta.varName})"></div></div>
+                <div class="val">${c}</div>
+              </div>`;
+          }).join('')}
+        </div>
+      `;
+      out.appendChild(rowEl);
+    }
+    requestAnimationFrame(() => {
+      out.querySelectorAll('.fill').forEach(el => {
+        el.style.width = el.dataset.w + '%';
+      });
+    });
+  }catch(e){
+    errBox.textContent = e.message;
+    errBox.style.display = 'block';
+  }finally{
+    btn.disabled = false; btn.textContent = 'Run benchmark';
+  }
+}
+
+document.getElementById('run-btn').addEventListener('click', runSearch);
+document.getElementById('bench-btn').addEventListener('click', runBenchmark);
+
+// Run once on load for an immediate result
+runSearch();
+</script>
+
+</body>
+</html>

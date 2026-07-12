@@ -10,7 +10,7 @@ import random
 import string
 import time
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
@@ -129,11 +129,17 @@ def index():
         "service": "String Matching Algorithms API",
         "endpoints": {
             "GET /": "this help message",
+            "GET /ui": "interactive frontend (try it in a browser)",
             "GET /health": "health check",
             "POST /search": "body: {\"text\": str, \"pattern\": str} -> matches/comparisons for all 3 algorithms",
             "GET /benchmark": "optional query params: length (int, default 10000), patterns (comma-separated, default AB,ABCD,ABCDAB,ABCDABCD)",
         },
     })
+
+
+@app.get("/ui")
+def ui():
+    return render_template("ui.html")
 
 
 @app.get("/health")
