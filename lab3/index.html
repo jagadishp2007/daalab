@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MST Lab — CS5303</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #121309;
+    --panel: #1B1C14;
+    --panel-2: #22241A;
+    --ink: #EDE7D6;
+    --ink-dim: #9C9887;
+    --rule: #34362A;
+    --kruskal: #B48CD9;
+    --prim: #52B3A4;
+    --edge-dim: #45473A;
+    --danger: #C97B63;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: radial-gradient(ellipse at top left, #191A11 0%, var(--bg) 55%);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    line-height:1.5;
+    min-height:100vh;
+    padding:0 0 80px;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:0 24px;}
+
+  header.hero{padding:64px 24px 40px; border-bottom:1px solid var(--rule);}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--ink-dim); display:flex; align-items:center; gap:10px; margin-bottom:18px;
+  }
+  .eyebrow::before{content:""; width:8px; height:8px; background:var(--prim); display:inline-block; animation:blink 1.6s steps(2) infinite;}
+  @keyframes blink{ 50%{opacity:.15;} }
+  h1{
+    font-family:'IBM Plex Mono',monospace; font-weight:700;
+    font-size:clamp(28px,4.4vw,44px); line-height:1.15; margin:0 0 14px; max-width:18ch;
+  }
+  h1 .accent{color:var(--kruskal);}
+  h1 .accent2{color:var(--prim);}
+  .sub{color:var(--ink-dim); max-width:60ch; font-size:15px; margin:0;}
+
+  .panel{background:var(--panel); border:1px solid var(--rule); border-radius:3px; padding:24px; margin-top:24px;}
+  .panel h2{
+    font-family:'IBM Plex Mono',monospace; font-size:13px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--ink-dim); margin:0 0 18px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .panel h2::after{content:""; flex:1; height:1px; background:var(--rule);}
+
+  label{
+    display:block; font-family:'IBM Plex Mono',monospace; font-size:11px;
+    letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim); margin-bottom:6px;
+  }
+  textarea, input[type=text], input[type=number]{
+    width:100%; background:var(--bg); border:1px solid var(--rule); border-radius:2px;
+    color:var(--ink); font-family:'IBM Plex Mono',monospace; font-size:14px; padding:10px 12px; resize:vertical;
+  }
+  textarea:focus, input:focus{ outline:2px solid var(--prim); outline-offset:1px; }
+  .field{margin-bottom:16px;}
+  .row{display:flex; gap:16px; flex-wrap:wrap;}
+  .row .field{flex:1; min-width:160px;}
+  .hint{font-size:12px; color:var(--ink-dim); margin-top:-10px; margin-bottom:16px;}
+
+  button{
+    font-family:'IBM Plex Mono',monospace; font-size:13px; letter-spacing:.06em; text-transform:uppercase;
+    background:var(--prim); color:#0B1A17; border:none; border-radius:2px; padding:11px 22px;
+    cursor:pointer; font-weight:600; transition:transform .12s ease, background .12s ease;
+  }
+  button:hover{background:#68CABB;}
+  button:active{transform:scale(.98);}
+  button:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
+  button[disabled]{opacity:.5; cursor:progress;}
+
+  .error-box{
+    display:none; margin-top:16px; padding:12px 14px; border:1px solid var(--danger);
+    color:var(--danger); font-family:'IBM Plex Mono',monospace; font-size:13px; border-radius:2px;
+  }
+
+  .tabs{display:flex; gap:2px; margin:22px 0 16px;}
+  .tab{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+    padding:9px 18px; background:var(--panel-2); color:var(--ink-dim); border:1px solid var(--rule);
+    cursor:pointer; border-radius:2px;
+  }
+  .tab.active[data-algo="kruskal"]{ color:var(--kruskal); border-color:var(--kruskal); }
+  .tab.active[data-algo="prim"]{ color:var(--prim); border-color:var(--prim); }
+
+  .graph-shell{
+    background:var(--bg); border:1px solid var(--rule); border-radius:2px; padding:8px;
+  }
+  svg{ display:block; width:100%; height:auto; }
+  .edge-base{ stroke:var(--edge-dim); stroke-width:1.5; }
+  .edge-mst{ stroke-width:3; }
+  .edge-label{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; fill:var(--ink-dim);
+  }
+  .node-circle{ stroke:var(--bg); stroke-width:2; }
+  .node-label{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; fill:var(--bg);
+    text-anchor:middle; dominant-baseline:central;
+  }
+
+  .cards{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:20px;}
+  @media (max-width:640px){ .cards{grid-template-columns:1fr;} }
+  .card{
+    background:var(--panel-2); border:1px solid var(--rule); border-left:3px solid var(--card-accent, var(--prim));
+    border-radius:2px; padding:16px;
+  }
+  .card .name{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--card-accent, var(--prim)); margin-bottom:10px;
+  }
+  .card .metric{font-family:'IBM Plex Mono',monospace; font-size:26px; font-weight:600;}
+  .card .metric-label{font-size:11px; color:var(--ink-dim); margin-bottom:2px;}
+  .card .small{font-size:12px; color:var(--ink-dim); margin-top:8px;}
+  .card ul{list-style:none; margin:10px 0 0; padding:0; font-family:'IBM Plex Mono',monospace; font-size:12px;}
+  .card li{padding:3px 0; color:var(--ink-dim);}
+  .card li span{color:var(--ink);}
+
+  footer{
+    text-align:center; color:var(--ink-dim); font-family:'IBM Plex Mono',monospace;
+    font-size:11px; margin-top:50px; letter-spacing:.05em;
+  }
+  a{color:var(--prim);}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">CS5303 · DAA Lab · Ex. No. 3</div>
+    <h1>Same graph.<br><span class="accent">Kruskal</span> sorts edges. <span class="accent2">Prim</span> grows a tree.</h1>
+    <p class="sub">Both reach the same minimum spanning tree cost by different strategies. Edit the graph, run both, and see which edges each one picks.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="panel">
+    <h2>Define the graph</h2>
+    <div class="row">
+      <div class="field">
+        <label for="n-input">Number of nodes</label>
+        <input type="number" id="n-input" value="7" min="2" max="30">
+      </div>
+      <div class="field">
+        <label for="start-input">Prim start node</label>
+        <input type="number" id="start-input" value="0" min="0">
+      </div>
+    </div>
+    <div class="field">
+      <label for="edges-input">Edges — one per line: weight,u,v</label>
+      <textarea id="edges-input" rows="6">7,0,1
+5,0,3
+8,1,2
+9,1,3
+7,1,4
+5,2,4
+15,3,4
+6,3,5
+8,4,5
+9,4,6
+11,5,6</textarea>
+    </div>
+    <div class="hint">Nodes are numbered 0 to n-1.</div>
+    <button id="run-btn">Run Kruskal &amp; Prim</button>
+    <div class="error-box" id="run-error"></div>
+  </div>
+
+  <div class="panel" id="results-panel" style="display:none;">
+    <h2>Result</h2>
+
+    <div class="tabs">
+      <div class="tab active" data-algo="kruskal">Kruskal</div>
+      <div class="tab" data-algo="prim">Prim</div>
+    </div>
+
+    <div class="graph-shell">
+      <svg id="graph-svg" viewBox="0 0 640 420"></svg>
+    </div>
+
+    <div class="cards">
+      <div class="card" style="--card-accent:var(--kruskal)">
+        <div class="name">Kruskal</div>
+        <div class="metric-label">Total MST cost</div>
+        <div class="metric" id="kruskal-cost">—</div>
+        <div class="small" id="kruskal-time"></div>
+        <ul id="kruskal-list"></ul>
+      </div>
+      <div class="card" style="--card-accent:var(--prim)">
+        <div class="name">Prim</div>
+        <div class="metric-label">Total MST cost</div>
+        <div class="metric" id="prim-cost">—</div>
+        <div class="small" id="prim-time"></div>
+        <ul id="prim-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    mst-api &middot; <a href="/api">raw JSON</a>
+  </footer>
+</div>
+
+<script>
+const API = "";
+let currentAlgo = 'kruskal';
+let lastData = null;
+
+function parseEdges(text){
+  return text.split('\n')
+    .map(l => l.trim())
+    .filter(Boolean)
+    .map(l => l.split(',').map(x => Number(x.trim())));
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function layoutNodes(n, width, height){
+  const cx = width/2, cy = height/2 - 10;
+  const r = Math.min(width, height)/2 - 60;
+  const pts = [];
+  for(let i=0;i<n;i++){
+    const angle = (2*Math.PI*i/n) - Math.PI/2;
+    pts.push({ x: cx + r*Math.cos(angle), y: cy + r*Math.sin(angle) });
+  }
+  return pts;
+}
+
+function edgeKey(u,v){ return u<v ? `${u}-${v}` : `${v}-${u}`; }
+
+function drawGraph(data, algo){
+  const svgEl = document.getElementById('graph-svg');
+  const width = 640, height = 420;
+  const n = data.n;
+  const pts = layoutNodes(n, width, height);
+  const accentVar = algo === 'kruskal' ? 'var(--kruskal)' : 'var(--prim)';
+  const mstSet = new Set(data.results[algo].mst.map(e => edgeKey(e.u, e.v)));
+
+  let svg = `<svg id="graph-svg" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">`;
+
+  // base edges
+  for(const e of data.edges){
+    const a = pts[e.u], b = pts[e.v];
+    const mx = (a.x+b.x)/2, my = (a.y+b.y)/2;
+    const isMst = mstSet.has(edgeKey(e.u, e.v));
+    svg += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="${isMst ? 'edge-mst' : 'edge-base'}" style="${isMst ? `stroke:${accentVar}` : ''}" />`;
+    svg += `<text x="${mx}" y="${my}" class="edge-label" text-anchor="middle">${e.weight}</text>`;
+  }
+
+  // nodes
+  pts.forEach((p, i) => {
+    svg += `<circle cx="${p.x}" cy="${p.y}" r="16" class="node-circle" fill="${accentVar}" />`;
+    svg += `<text x="${p.x}" y="${p.y}" class="node-label">${i}</text>`;
+  });
+
+  svg += `</svg>`;
+  svgEl.outerHTML = svg;
+}
+
+function renderResult(data){
+  lastData = data;
+
+  for(const algo of ['kruskal','prim']){
+    const r = data.results[algo];
+    document.getElementById(`${algo}-cost`).textContent = r.cost;
+    document.getElementById(`${algo}-time`).textContent = `${r.mst.length} edges · ${r.time_ms} ms`;
+    const list = document.getElementById(`${algo}-list`);
+    list.innerHTML = r.mst.map(e => `<li>(${e.u} — ${e.v}) <span>${e.weight}</span></li>`).join('');
+  }
+
+  drawGraph(data, currentAlgo);
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentAlgo = tab.dataset.algo;
+    if(lastData) drawGraph(lastData, currentAlgo);
+  });
+});
+
+async function runMst(){
+  const n = parseInt(document.getElementById('n-input').value, 10);
+  const start = parseInt(document.getElementById('start-input').value, 10);
+  const edges = parseEdges(document.getElementById('edges-input').value);
+  const btn = document.getElementById('run-btn');
+  const errBox = document.getElementById('run-error');
+  errBox.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Running…';
+
+  try{
+    const res = await fetch(API + '/mst', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ n, edges, start })
+    });
+    const data = await res.json();
+    if(!res.ok){ throw new Error(data.error || 'Request failed'); }
+
+    document.getElementById('results-panel').style.display = 'block';
+    if(!data.connected){
+      errBox.textContent = 'Warning: graph is not fully connected — MST may not span all nodes.';
+      errBox.style.display = 'block';
+      errBox.style.borderColor = 'var(--prim)';
+      errBox.style.color = 'var(--ink-dim)';
+    }
+    renderResult(data);
+  }catch(e){
+    errBox.textContent = e.message;
+    errBox.style.display = 'block';
+    errBox.style.borderColor = 'var(--danger)';
+    errBox.style.color = 'var(--danger)';
+    document.getElementById('results-panel').style.display = 'none';
+  }finally{
+    btn.disabled = false; btn.textContent = 'Run Kruskal & Prim';
+  }
+}
+
+document.getElementById('run-btn').addEventListener('click', runMst);
+runMst();
+</script>
+
+</body>
+</html>
