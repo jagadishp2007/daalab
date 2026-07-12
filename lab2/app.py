@@ -124,22 +124,23 @@ def run_all(text, pattern):
 # ----------------------------
 
 @app.get("/")
+def ui():
+    return render_template("ui.html")
+
+
+@app.get("/api")
 def index():
     return jsonify({
         "service": "String Matching Algorithms API",
         "endpoints": {
-            "GET /": "this help message",
-            "GET /ui": "interactive frontend (try it in a browser)",
+            "GET /": "interactive frontend",
+            "GET /api": "this help message",
             "GET /health": "health check",
             "POST /search": "body: {\"text\": str, \"pattern\": str} -> matches/comparisons for all 3 algorithms",
             "GET /benchmark": "optional query params: length (int, default 10000), patterns (comma-separated, default AB,ABCD,ABCDAB,ABCDABCD)",
         },
     })
 
-
-@app.get("/ui")
-def ui():
-    return render_template("ui.html")
 
 
 @app.get("/health")
