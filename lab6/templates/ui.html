@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Matrix Chain Multiplication Visualizer</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2f3a;
+    --text: #e6e8eb;
+    --muted: #9aa3b2;
+    --accent: #5b8cff;
+    --accent2: #ff9f5b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); margin-bottom: 20px; font-size: 0.9rem; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 20px;
+  }
+  label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+  input[type=text] {
+    width: 100%;
+    padding: 10px 12px;
+    background: #0d0f14;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 0.95rem;
+  }
+  button {
+    margin-top: 12px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  button:hover { opacity: 0.9; }
+  .error { color: #ff6b6b; margin-top: 10px; font-size: 0.85rem; }
+  .result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 800px) { .result-grid { grid-template-columns: 1fr; } }
+  .stat { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+  .stat:last-child { border-bottom: none; }
+  .stat .val { color: var(--accent); font-weight: 600; }
+  table.heat { border-collapse: collapse; width: 100%; font-size: 0.8rem; }
+  table.heat th, table.heat td {
+    border: 1px solid var(--border);
+    text-align: center;
+    padding: 6px;
+    min-width: 40px;
+  }
+  table.heat th { color: var(--muted); font-weight: 500; }
+  .tree-wrap { overflow-x: auto; }
+  #treeSvg { display: block; margin: 0 auto; }
+  .node-box { fill: #1d2230; stroke: var(--accent); stroke-width: 1.5; rx: 6; }
+  .leaf-box { fill: #1d2230; stroke: var(--accent2); stroke-width: 1.5; rx: 6; }
+  .node-text { fill: var(--text); font-size: 12px; text-anchor: middle; font-family: monospace; }
+  .edge { stroke: #3a4152; stroke-width: 1.5; }
+  code { background: #0d0f14; padding: 2px 6px; border-radius: 4px; color: var(--accent2); }
+</style>
+</head>
+<body>
+
+<h1>Matrix Chain Multiplication</h1>
+<div class="subtitle">Dynamic programming visualizer — DP cost table &amp; optimal parenthesization tree</div>
+
+<div class="panel">
+  <label for="dimsInput">Matrix dimensions (comma-separated, e.g. dims for A1..An gives n+1 numbers)</label>
+  <input type="text" id="dimsInput" value="10, 30, 5, 60, 10">
+  <button onclick="solve()">Solve</button>
+  <div class="error" id="errorBox"></div>
+</div>
+
+<div id="resultsArea"></div>
+
+<script>
+async function solve() {
+  const raw = document.getElementById('dimsInput').value;
+  const errorBox = document.getElementById('errorBox');
+  const resultsArea = document.getElementById('resultsArea');
+  errorBox.textContent = '';
+  resultsArea.innerHTML = '';
+
+  const dims = raw.split(',').map(s => parseInt(s.trim(), 10));
+  if (dims.some(isNaN) || dims.length < 2) {
+    errorBox.textContent = 'Enter at least 2 valid integers, comma-separated.';
+    return;
+  }
+
+  try {
+    const res = await fetch('/solve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dims })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errorBox.textContent = data.error || 'Something went wrong.';
+      return;
+    }
+    render(data);
+  } catch (e) {
+    errorBox.textContent = 'Request failed: ' + e.message;
+  }
+}
+
+function render(data) {
+  const resultsArea = document.getElementById('resultsArea');
+
+  const summary = document.createElement('div');
+  summary.className = 'panel';
+  summary.innerHTML = `
+    <div class="result-grid">
+      <div>
+        <div class="stat"><span>Matrices</span><span class="val">${data.matrices.join(', ')}</span></div>
+        <div class="stat"><span>Count (n)</span><span class="val">${data.num_matrices}</span></div>
+        <div class="stat"><span>Min scalar multiplications</span><span class="val">${data.min_multiplications}</span></div>
+      </div>
+      <div>
+        <div class="stat"><span>Optimal parenthesization</span></div>
+        <div style="padding:8px 0;"><code>${data.optimal_parenthesization}</code></div>
+      </div>
+    </div>
+  `;
+  resultsArea.appendChild(summary);
+
+  const tablePanel = document.createElement('div');
+  tablePanel.className = 'panel';
+  tablePanel.innerHTML = '<h3 style="margin-top:0;">DP Cost Table m[i][j] (heatmap)</h3>' + buildHeatTable(data.m_table, data.num_matrices);
+  resultsArea.appendChild(tablePanel);
+
+  const treePanel = document.createElement('div');
+  treePanel.className = 'panel tree-wrap';
+  treePanel.innerHTML = '<h3 style="margin-top:0;">Parenthesization Tree</h3>';
+  resultsArea.appendChild(treePanel);
+  treePanel.appendChild(buildTreeSvg(data.tree));
+}
+
+function buildHeatTable(m, n) {
+  let max = 0;
+  for (let i = 1; i <= n; i++)
+    for (let j = 1; j <= n; j++)
+      if (m[i][j] > max) max = m[i][j];
+
+  let html = '<table class="heat"><tr><th></th>';
+  for (let j = 1; j <= n; j++) html += `<th>A${j}</th>`;
+  html += '</tr>';
+
+  for (let i = 1; i <= n; i++) {
+    html += `<tr><th>A${i}</th>`;
+    for (let j = 1; j <= n; j++) {
+      if (j < i) {
+        html += '<td style="color:#444;">—</td>';
+      } else {
+        const val = m[i][j];
+        const ratio = max ? val / max : 0;
+        const bg = `rgba(91,140,255,${0.12 + ratio * 0.6})`;
+        html += `<td style="background:${bg};">${val}</td>`;
+      }
+    }
+    html += '</tr>';
+  }
+  html += '</table>';
+  return html;
+}
+
+// --- Tree layout ---
+function buildTreeSvg(tree) {
+  const nodeW = 90, nodeH = 34, vGap = 60;
+
+  function measure(node) {
+    if (node.leaf) { node._width = nodeW; return nodeW; }
+    const lw = measure(node.left);
+    const rw = measure(node.right);
+    node._width = lw + rw + 20;
+    return node._width;
+  }
+  measure(tree);
+
+  function layout(node, x, y, depth) {
+    node._x = x;
+    node._y = y;
+    node._depth = depth;
+    if (!node.leaf) {
+      const lw = node.left._width;
+      const rw = node.right._width;
+      layout(node.left, x - node._width / 2 + lw / 2, y + vGap, depth + 1);
+      layout(node.right, x + node._width / 2 - rw / 2, y + vGap, depth + 1);
+    }
+  }
+  layout(tree, tree._width / 2, 30, 0);
+
+  function maxDepth(node) {
+    if (node.leaf) return node._depth;
+    return Math.max(maxDepth(node.left), maxDepth(node.right));
+  }
+  const depth = maxDepth(tree);
+  const svgW = Math.max(tree._width, 300);
+  const svgH = 30 + depth * vGap + nodeH + 20;
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('id', 'treeSvg');
+  svg.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
+  svg.setAttribute('width', Math.min(svgW, 900));
+  svg.setAttribute('height', svgH);
+
+  function drawEdges(node) {
+    if (!node.leaf) {
+      [node.left, node.right].forEach(child => {
+        const line = document.createElementNS(ns, 'line');
+        line.setAttribute('x1', node._x);
+        line.setAttribute('y1', node._y + nodeH / 2);
+        line.setAttribute('x2', child._x);
+        line.setAttribute('y2', child._y - nodeH / 2);
+        line.setAttribute('class', 'edge');
+        svg.appendChild(line);
+        drawEdges(child);
+      });
+    }
+  }
+  drawEdges(tree);
+
+  function drawNodes(node) {
+    const g = document.createElementNS(ns, 'g');
+    const rect = document.createElementNS(ns, 'rect');
+    rect.setAttribute('x', node._x - nodeW / 2);
+    rect.setAttribute('y', node._y - nodeH / 2);
+    rect.setAttribute('width', nodeW);
+    rect.setAttribute('height', nodeH);
+    rect.setAttribute('class', node.leaf ? 'leaf-box' : 'node-box');
+    rect.setAttribute('rx', 6);
+    g.appendChild(rect);
+
+    const text = document.createElementNS(ns, 'text');
+    text.setAttribute('x', node._x);
+    text.setAttribute('y', node._y + 4);
+    text.setAttribute('class', 'node-text');
+    text.textContent = node.label;
+    g.appendChild(text);
+
+    svg.appendChild(g);
+    if (!node.leaf) {
+      drawNodes(node.left);
+      drawNodes(node.right);
+    }
+  }
+  drawNodes(tree);
+
+  return svg;
+}
+
+// auto-solve on load with default example
+window.addEventListener('DOMContentLoaded', solve);
+</script>
+
+</body>
+</html>
